@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <openerp>
 	<data>
-		<record id="view_wc_backend_tree" model="ir.ui.view">
-			<field name="name">wc.backend.tree</field>
-			<field name="model">wc.backend</field>
+		 <record id="view_wc_backend_tree" model="ir.ui.view">
+			<field name="name">woo.backend.tree</field>
+			<field name="model">woo.backend</field>
 			<field name="type">tree</field>
 			<field name="priority" eval="8" />
 			<field name="arch" type="xml">
@@ -11,11 +11,11 @@
 					<field name="name" />
 				</tree>
 			</field>
-		</record>
+		</record> 
 
 		<record id="view_wc_backend_form" model="ir.ui.view">
-			<field name="name">wc.backend.form</field>
-			<field name="model">wc.backend</field>
+			<field name="name">woo.backend.form</field>
+			<field name="model">woo.backend</field>
 			<field name="type">form</field>
 			<field name="priority" eval="8" />
 			<field name="arch" type="xml">
@@ -43,8 +43,6 @@
 							<button name="import_categories" type="object" class="oe_highlight"
 								string="Import in background" />
 						</group>
-						
-						
 						<group>
 							<label string="Import Product" class="oe_inline" />
 							<button name="import_products" type="object" class="oe_highlight"
@@ -68,7 +66,7 @@
 		<record model="ir.actions.act_window" id="act_open_wc_backend_view">
 			<field name="name">Backend</field>
 			<field name="type">ir.actions.act_window</field>
-			<field name="res_model">wc.backend</field>
+			<field name="res_model">woo.backend</field>
 			<field name="view_type">form</field>
 			<field name="view_mode">tree,form</field>
 			<field name="domain">[]</field>
@@ -89,7 +87,21 @@
 			<field name="view_id" ref="view_wc_backend_tree" />
 		</record>
 
-		<menuitem id="menu_wc_backend" parent="connector.menu_queue"
-			sequence="20" action="act_open_wc_backend_view" />
+		<menuitem id="menu_wc_backend"
+        parent="connector.menu_connector"
+        name="Backend"
+        action="act_open_wc_backend_view"
+        groups="connector.group_connector_manager"
+        sequence="20"/>
+		
+		<!-- Adding Groups to Checkpoint Menu -->
+		<!-- <record model="ir.ui.menu" id="connector.menu_checkpoint">
+            <field name="groups">base.group_no_one</field>
+        </record> -->
+        
+        <!-- Deleting Checkpoint Menu -->
+		<delete model="ir.ui.menu" 
+		    id="connector.menu_checkpoint"/>
+		
 	</data>
 </openerp>

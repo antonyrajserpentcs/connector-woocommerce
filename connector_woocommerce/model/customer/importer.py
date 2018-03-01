@@ -20,92 +20,27 @@
 #
 
 import logging
-import xmlrpclib
-from openerp import models, fields
-from openerp.addons.connector.queue.job import job
-from openerp.addons.connector.unit.mapper import (mapping,
-                                                  ImportMapper
-                                                  )
-from openerp.addons.connector.exception import IDMissingInBackend
-from ..unit.backend_adapter import (GenericAdapter)
-from ..unit.import_synchronizer import (DelayedBatchImporter, WooImporter)
-from ..connector import get_environment
-from ..backend import woo
+from odoo.addons.component.core import Component
+from odoo.addons.connector.exception import IDMissingInBackend
+from odoo.addons.connector.components.mapper import mapping
 
 _logger = logging.getLogger(__name__)
 
 
-class WooResPartner(models.Model):
-    _name = 'woo.res.partner'
-    _inherit = 'woo.binding'
-    _inherits = {'res.partner': 'openerp_id'}
-    _description = 'woo res partner'
-
-    _rec_name = 'name'
-
-    openerp_id = fields.Many2one(comodel_name='res.partner',
-                                 string='Partner',
-                                 required=True,
-                                 ondelete='cascade')
-    backend_id = fields.Many2one(
-        comodel_name='wc.backend',
-        string='Woo Backend',
-        store=True,
-        readonly=False,
-    )
-
-
-@woo
-class CustomerAdapter(GenericAdapter):
-    _model_name = 'woo.res.partner'
-    _woo_model = 'customers'
-
-    def _call(self, method, arguments):
-        try:
-            return super(CustomerAdapter, self)._call(method, arguments)
-        except xmlrpclib.Fault as err:
-            # this is the error in the WooCommerce API
-            # when the customer does not exist
-            if err.faultCode == 102:
-                raise IDMissingInBackend
-            else:
-                raise
-
-    def search(self, filters=None, from_date=None, to_date=None):
-        """ Search records according to some criteria and return a
-        list of ids
-
-        :rtype: list
-        """
-        if filters is None:
-            filters = {}
-        WOO_DATETIME_FORMAT = '%Y/%m/%d %H:%M:%S'
-        dt_fmt = WOO_DATETIME_FORMAT
-        if from_date is not None:
-            # updated_at include the created records
-            filters.setdefault('updated_at', {})
-            filters['updated_at']['from'] = from_date.strftime(dt_fmt)
-        if to_date is not None:
-            filters.setdefault('updated_at', {})
-            filters['updated_at']['to'] = to_date.strftime(dt_fmt)
-        # the search method is on ol_customer instead of customer
-        return self._call('customers/list',
-                          [filters] if filters else [{}])
-
-
-@woo
-class CustomerBatchImporter(DelayedBatchImporter):
+class CustomerBatchImporter(Component):
 
     """ Import the WooCommerce Partners.
 
     For every partner in the list, a delayed job is created.
     """
-    _model_name = ['woo.res.partner']
+    _name = 'woo.partner.batch.importer'
+    _inherit = 'woo.delayed.batch.importer'
+    _apply_on = 'woo.res.partner'
 
-    def _import_record(self, woo_id, priority=None):
+    def _import_record(self, woo_id):
         """ Delay a job for the import """
         super(CustomerBatchImporter, self)._import_record(
-            woo_id, priority=priority)
+            woo_id)
 
     def run(self, filters=None):
         """ Run the synchronization """
@@ -116,38 +51,35 @@ class CustomerBatchImporter(DelayedBatchImporter):
             from_date=from_date,
             to_date=to_date,
         )
-#         record_ids = self.env['wc.backend'].get_customer_ids(record_ids)
+#         record_ids = self.env['woo.backend'].get_customer_ids(record_ids)
         _logger.info('search for woo partners %s returned %s',
                      filters, record_ids)
         for record_id in record_ids:
-            self._import_record(record_id, 40)
+            self._import_record(record_id)
 
 
-CustomerBatchImporter = CustomerBatchImporter  # deprecated
-
-
-@woo
-class CustomerImporter(WooImporter):
-    _model_name = ['woo.res.partner']
+class CustomerImporter(Component):
+    _name = 'woo.partner.importer'
+    _inherit = 'woo.importer'
+    _apply_on = 'woo.res.partner'
 
     def _import_dependencies(self):
         """ Import the dependencies for the record"""
         return
 
     def _create(self, data):
-        openerp_binding = super(CustomerImporter, self)._create(data)
-        return openerp_binding
+        odoo_binding = super(CustomerImporter, self)._create(data)
+        return odoo_binding
 
     def _after_import(self, binding):
         """ Hook called at the end of the import """
         return
 
-CustomerImport = CustomerImporter  # deprecated
 
-
-@woo
-class CustomerImportMapper(ImportMapper):
-    _model_name = 'woo.res.partner'
+class CustomerImportMapper(Component):
+    _name = 'woo.partner.import.mapper'
+    _inherit = 'woo.import.mapper'
+    _apply_on = 'woo.res.partner'
 
     @mapping
     def name(self, record):
@@ -203,10 +135,10 @@ class CustomerImportMapper(ImportMapper):
                 rec = record['customer']['billing_address']
                 if rec['state'] and rec['country']:
                     state_id = self.env['res.country.state'].search(
-                        [('code', '=', rec['state'])])
+                        [('code', '=', rec['state'])], limit=1)
                     if not state_id:
                         country_id = self.env['res.country'].search(
-                            [('code', '=', rec['country'])])
+                            [('code', '=', rec['country'])], limit=1)
                         state_id = self.env['res.country.state'].create(
                             {'name': rec['state'],
                              'code': rec['state'],
@@ -219,11 +151,3 @@ class CustomerImportMapper(ImportMapper):
     @mapping
     def backend_id(self, record):
         return {'backend_id': self.backend_record.id}
-
-
-@job(default_channel='root.woo')
-def customer_import_batch(session, model_name, backend_id, filters=None):
-    """ Prepare the import of Customer """
-    env = get_environment(session, model_name, backend_id)
-    importer = env.get_connector_unit(CustomerBatchImporter)
-    importer.run(filters=filters)
