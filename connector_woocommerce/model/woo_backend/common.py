@@ -18,24 +18,21 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
+from contextlib import contextmanager
 
-from openerp import models, api, fields, _
+from odoo import models, api, fields, _
 from woocommerce import API
-from openerp.exceptions import Warning
-from openerp.addons.connector.session import ConnectorSession
+from odoo.exceptions import Warning
 from datetime import datetime
-from .product_category import category_import_batch
-from .product import product_import_batch
-from .customer import customer_import_batch
-from .sale import sale_order_import_batch
+from ...components.backend_adapter import WooLocation, WooAPI
 
 
-class wc_backend(models.Model):
-    _name = 'wc.backend'
+class WcBackend(models.Model):
+    _name = 'woo.backend'
     _inherit = 'connector.backend'
     _description = 'WooCommerce Backend Configuration'
+
     name = fields.Char(string='name')
-    _backend_type = 'woo'
     location = fields.Char("Url")
     consumer_key = fields.Char("Consumer key")
     consumer_secret = fields.Char("Consumer Secret")
@@ -49,6 +46,25 @@ class wc_backend(models.Model):
              "Note that a similar configuration exists "
              "for each storeview.",
     )
+
+    @contextmanager
+    @api.multi
+    def work_on(self, model_name, **kwargs):
+        self.ensure_one()
+        lang = self.default_lang_id
+        if lang.code != self.env.context.get('lang'):
+            self = self.with_context(lang=lang.code)
+        woo_location = WooLocation(
+            self.location,
+            self.consumer_key,
+            self.consumer_secret,
+        )
+        with WooAPI(woo_location) as woo_api:
+            _super = super(WcBackend, self)
+            # from the components we'll be able to do: self.work.woo_api
+            with _super.work_on(
+                    model_name, woo_api=woo_api, **kwargs) as work:
+                yield work
 
     @api.multi
     def get_product_ids(self, data):
@@ -83,7 +99,7 @@ class wc_backend(models.Model):
         order_ids = []
         for val in data['orders']:
             woo_sale_order = self.env['woo.sale.order'].search(
-                [('woo_id', '=', val['id'])])
+                [('external_id', '=', val['id'])])
             if woo_sale_order:
                 self.update_existing_order(woo_sale_order[0], val)
                 continue
@@ -95,17 +111,21 @@ class wc_backend(models.Model):
         location = self.location
         cons_key = self.consumer_key
         sec_key = self.consumer_secret
-        version = 'v2'
-
-        wcapi = API(url=location, consumer_key=cons_key,
-                    consumer_secret=sec_key, version=version)
+        version = 'v3'
+        wcapi = API(url=location,
+                    consumer_key=cons_key,
+                    consumer_secret=sec_key,
+                    version=version,
+                    query_string_auth=True
+                    )
         r = wcapi.get("products")
         if r.status_code == 404:
             raise Warning(_("Enter Valid url"))
         val = r.json()
         msg = ''
         if 'errors' in r.json():
-            msg = val['errors'][0]['message'] + '\n' + val['errors'][0]['code']
+            msg = val['errors'][0]['message'] + '\n' + \
+            val['errors'][0]['code']
             raise Warning(_(msg))
         else:
             raise Warning(_('Test Success'))
@@ -113,80 +133,76 @@ class wc_backend(models.Model):
 
     @api.multi
     def import_category(self):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
         import_start_time = datetime.now()
-        backend_id = self.id
+        backend = self
         from_date = None
-        category_import_batch.delay(
-            session, 'woo.product.category', backend_id,
-            {'from_date': from_date,
-             'to_date': import_start_time}, priority=1)
+        self.env['woo.product.category'].with_delay().import_batch(
+                backend,
+                filters={'from_date': from_date,
+                         'to_date': import_start_time},
+            )
         return True
 
     @api.multi
     def import_product(self):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
         import_start_time = datetime.now()
-        backend_id = self.id
+        backend = self
         from_date = None
-        product_import_batch.delay(
-            session, 'woo.product.product', backend_id,
-            {'from_date': from_date,
-             'to_date': import_start_time}, priority=2)
+        self.env['woo.product.product'].with_delay().import_batch(
+                backend,
+                filters={'from_date': from_date,
+                         'to_date': import_start_time},
+            )
         return True
 
     @api.multi
     def import_customer(self):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
         import_start_time = datetime.now()
-        backend_id = self.id
+        backend = self
         from_date = None
-        customer_import_batch.delay(
-            session, 'woo.res.partner', backend_id,
-            {'from_date': from_date,
-             'to_date': import_start_time}, priority=3)
+        self.env['woo.res.partner'].with_delay().import_batch(
+                backend,
+                filters={'from_date': from_date,
+                         'to_date': import_start_time}
+            )
         return True
 
     @api.multi
     def import_order(self):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
         import_start_time = datetime.now()
-        backend_id = self.id
+        backend = self
         from_date = None
-        sale_order_import_batch.delay(
-            session, 'woo.sale.order', backend_id,
-            {'from_date': from_date,
-             'to_date': import_start_time}, priority=4)
+        self.env['woo.sale.order'].with_delay().import_batch(
+                backend,
+                filters={'from_date': from_date,
+                         'to_date': import_start_time}
+            )
         return True
 
     @api.multi
     def import_categories(self):
-        """ Import Product categories """
+        """ Import Product categories from WooCommerce site """
         for backend in self:
             backend.import_category()
         return True
 
     @api.multi
     def import_products(self):
-        """ Import categories from all websites """
+        """ Import Products from WooCommerce  site """
         for backend in self:
             backend.import_product()
         return True
 
     @api.multi
     def import_customers(self):
-        """ Import categories from all websites """
+        """ Import Customers from WooCommerce  site """
         for backend in self:
             backend.import_customer()
         return True
 
     @api.multi
     def import_orders(self):
-        """ Import Orders from all websites """
+        """ Import Orders from WooCommerce  site """
         for backend in self:
             backend.import_order()
         return True

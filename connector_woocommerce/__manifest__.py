@@ -21,14 +21,17 @@
 
 {
     'name': 'WooCommerce Connector',
-    'version': '8.0.1.0.1',
+    'version': '0.1',
     'category': 'customized',
     'description': """WooCommerce Connector.""",
     'author': 'Tech Receptives',
+    'contributors': 'Tech Receptives, Serpent Consulting Services',
     'maintainer': 'OpenERP SA',
     'website': 'http://www.openerp.com',
+    'summary': """Imports the Product Categories, Products, Customers and
+                    Sale orders from Woocommerce.""",
     'depends': ['base', 'connector', 'connector_ecommerce'],
-    'installable': False,
+    'installable': True,
     'auto_install': False,
     'data': [
         "security/ir.model.access.csv",
@@ -37,7 +40,6 @@
     'external_dependencies': {
         'python': ['woocommerce'],
     },
-    'js': [],
     'application': True,
     "sequence": 3,
 }
