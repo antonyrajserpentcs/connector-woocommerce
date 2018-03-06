@@ -21,12 +21,12 @@
 
 {
     'name': 'WooCommerce Connector',
-    'version': '0.1',
+    'version': '10.0.1.0.1',
     'category': 'customized',
     'description': """WooCommerce Connector.""",
     'author': 'Tech Receptives',
-    'contributors': 'Tech Receptives, Serpent Consulting Services',
-    'maintainer': 'OpenERP SA',
+    'contributors': 'Tech Receptives, Serpent Consulting Services Pvt. Ltd.',
+    'maintainer': 'OCA',
     'website': 'http://www.openerp.com',
     'summary': """Imports the Product Categories, Products, Customers and
                     Sale orders from Woocommerce.""",

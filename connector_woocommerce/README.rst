@@ -2,18 +2,18 @@
    :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
    :alt: License: AGPL-3
 
-=========================
+=====================
 Woocommerce Connector
-=========================
+=====================
 
 Features
 --------
 
 **Helps to import the Woocommerce records such as below**
-* Product Categeries
-* Products
-* Customers
-* Sale Orders
+	* Product Categeries
+	* Products
+	* Customers
+	* Sale Orders
 
 Configuration
 -------------
@@ -75,7 +75,7 @@ Contributors
 ------------
 
 * Tech-Receptives Solutions <https://techreceptives.com/>
-* Serpent Consulting Services <http://www.serpentcs.com/>
+* Serpent Consulting Services Pvt. Ltd.<http://www.serpentcs.com/>
 
 Maintainer
 ----------
