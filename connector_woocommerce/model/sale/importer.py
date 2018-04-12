@@ -140,7 +140,20 @@ class SaleOrderImporter(Component):
 
     def _create(self, data):
         odoo_binding = super(SaleOrderImporter, self)._create(data)
+        # Adding Creation Checkpoint
+        self.backend_record.add_checkpoint(odoo_binding)
         return odoo_binding
+
+    def _update(self, binding, data):
+        """ Update an Odoo record """
+        super(SaleOrderImporter, self)._update(binding, data)
+        # Adding updation checkpoint
+        #self.backend_record.add_checkpoint(binding)
+        return
+
+    def _before_import(self):
+        """ Hook called before the import"""
+        return
 
     def _after_import(self, binding):
         """ Hook called at the end of the import """
@@ -169,17 +182,11 @@ class SaleOrderImportMapper(Component):
             rec = record['order']
             if rec['status'] == 'pending':
                 rec['status'] = 'draft'
-            elif rec['status'] == 'processing':
-                rec['status'] = 'sale'
-            elif rec['status'] == 'on-hold':
+            elif rec['status'] in ['processing', 'refunded', 'on-hold']:
                 rec['status'] = 'sale'
             elif rec['status'] == 'completed':
                 rec['status'] = 'done'
-            elif rec['status'] == 'cancelled':
-                rec['status'] = 'cancel'
-            elif rec['status'] == 'refunded':
-                rec['status'] = 'sale'
-            elif rec['status'] == 'failed':
+            elif rec['status'] in ['cancelled', 'failed']:
                 rec['status'] = 'cancel'
             if rec['status']:
                 status_id = self.env['woo.sale.order.status'].sudo().search(

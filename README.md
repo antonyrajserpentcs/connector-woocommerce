@@ -8,7 +8,7 @@ Odoo Connector WooCommerce Modules
 [//]: # (addons)
 
 Available addons
----------------
+----------------
 addon | version | summary
 --- | --- | ---
 [connector_woocommerce](connector_woocommerce/) | 10.0.1.0.1 | WooCommerce Connector

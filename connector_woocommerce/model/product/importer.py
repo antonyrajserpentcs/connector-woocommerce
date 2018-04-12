@@ -74,7 +74,20 @@ class ProductProductImporter(Component):
 
     def _create(self, data):
         odoo_binding = super(ProductProductImporter, self)._create(data)
+        # Adding Creation Checkpoint
+        self.backend_record.add_checkpoint(odoo_binding)
         return odoo_binding
+
+    def _update(self, binding, data):
+        """ Update an Odoo record """
+        super(ProductProductImporter, self)._update(binding, data)
+        # Adding updation checkpoint
+        #self.backend_record.add_checkpoint(binding)
+        return
+
+    def _before_import(self):
+        """ Hook called before the import"""
+        return
 
     def _after_import(self, binding):
         """ Hook called at the end of the import """

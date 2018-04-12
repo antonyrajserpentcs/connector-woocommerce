@@ -94,14 +94,5 @@
         groups="connector.group_connector_manager"
         sequence="20"/>
 		
-		<!-- Adding Groups to Checkpoint Menu -->
-		<!-- <record model="ir.ui.menu" id="connector.menu_checkpoint">
-            <field name="groups">base.group_no_one</field>
-        </record> -->
-        
-        <!-- Deleting Checkpoint Menu -->
-		<delete model="ir.ui.menu" 
-		    id="connector.menu_checkpoint"/>
-		
 	</data>
 </openerp>

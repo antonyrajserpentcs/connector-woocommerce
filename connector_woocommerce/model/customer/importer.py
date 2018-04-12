@@ -46,14 +46,15 @@ class CustomerBatchImporter(Component):
         """ Run the synchronization """
         from_date = filters.pop('from_date', None)
         to_date = filters.pop('to_date', None)
+        # Get external ids with specific filters
         record_ids = self.backend_adapter.search(
             filters,
             from_date=from_date,
             to_date=to_date,
         )
-#         record_ids = self.env['woo.backend'].get_customer_ids(record_ids)
         _logger.info('search for woo partners %s returned %s',
                      filters, record_ids)
+        # Importing data
         for record_id in record_ids:
             self._import_record(record_id)
 
@@ -69,7 +70,20 @@ class CustomerImporter(Component):
 
     def _create(self, data):
         odoo_binding = super(CustomerImporter, self)._create(data)
+        # Adding Creation Checkpoint
+        self.backend_record.add_checkpoint(odoo_binding)
         return odoo_binding
+
+    def _update(self, binding, data):
+        """ Update an Odoo record """
+        super(CustomerImporter, self)._update(binding, data)
+        # Adding updation checkpoint
+        #self.backend_record.add_checkpoint(binding)
+        return
+
+    def _before_import(self):
+        """ Hook called before the import"""
+        return
 
     def _after_import(self, binding):
         """ Hook called at the end of the import """
