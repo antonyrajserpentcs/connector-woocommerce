@@ -35,7 +35,7 @@ _logger = logging.getLogger(__name__)
 try:
     from woocommerce import API
 except ImportError:
-    _logger.debug("Cannot import 'woocommerce'")
+    _logger.debug("Can not import 'woocommerce'")
 
 
 WOO_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -43,10 +43,11 @@ WOO_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class WooLocation(object):
 
-    def __init__(self, location, consumer_key, consumre_secret):
+    def __init__(self, location, consumer_key, consumre_secret, version):
         self._location = location
         self.consumer_key = consumer_key
         self.consumer_secret = consumre_secret
+        self.version = version
 
     @property
     def location(self):
@@ -84,7 +85,7 @@ class WooAPI(object):
             location = self._location._location
             cons_key = self._location.consumer_key
             sec_key = self._location.consumer_secret
-            version = 'v3'
+            version = self._location.version or 'v3'
             api = API(url=location,
                         consumer_key=cons_key,
                         consumer_secret=sec_key,

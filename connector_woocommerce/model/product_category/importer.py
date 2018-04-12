@@ -76,7 +76,20 @@ class ProductCategoryImporter(Component):
 
     def _create(self, data):
         odoo_binding = super(ProductCategoryImporter, self)._create(data)
+        # Adding Creation Checkpoint
+        self.backend_record.add_checkpoint(odoo_binding)
         return odoo_binding
+
+    def _update(self, binding, data):
+        """ Update an Odoo record """
+        super(ProductCategoryImporter, self)._update(binding, data)
+        # Adding updation checkpoint
+        #self.backend_record.add_checkpoint(binding)
+        return
+
+    def _before_import(self):
+        """ Hook called before the import"""
+        return
 
     def _after_import(self, binding):
         """ Hook called at the end of the import """
@@ -97,7 +110,6 @@ class ProductCategoryImportMapper(Component):
     @mapping
     def backend_id(self, record):
         return {'backend_id': self.backend_record.id}
-#
 
     @mapping
     def parent_id(self, record):
@@ -106,7 +118,9 @@ class ProductCategoryImportMapper(Component):
             if not rec['parent']:
                 return
             binder = self.binder_for()
+            # Get id of product.category model
             category_id = binder.to_internal(rec['parent'], unwrap=True)
+            # Get id of woo.product.category model
             woo_cat_id = binder.to_internal(rec['parent'])
             if category_id is None:
                 raise MappingError("The product category with "

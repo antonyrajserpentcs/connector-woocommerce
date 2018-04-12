@@ -51,10 +51,8 @@ class WooBinding(models.AbstractModel):
 
     @job(default_channel='root.woo')
     @api.model
-    def import_batch(self, backend, filters=None):
+    def import_batch(self, backend, filters=dict()):
         """ Prepare the import of records modified on Woo """
-        if filters is None:
-            filters = {}
         with backend.work_on(self._name) as work:
             importer = work.component(usage='batch.importer')
             return importer.run(filters=filters)

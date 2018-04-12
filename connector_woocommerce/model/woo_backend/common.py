@@ -18,13 +18,22 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
+import logging
+
+from datetime import datetime
 from contextlib import contextmanager
 
 from odoo import models, api, fields, _
-from woocommerce import API
 from odoo.exceptions import Warning
-from datetime import datetime
+from odoo.addons.connector.checkpoint import checkpoint
 from ...components.backend_adapter import WooLocation, WooAPI
+
+_logger = logging.getLogger(__name__)
+
+try:
+    from woocommerce import API
+except ImportError:
+    _logger.debug("Can not import 'woocommerce'")
 
 
 class WcBackend(models.Model):
@@ -36,7 +45,11 @@ class WcBackend(models.Model):
     location = fields.Char("Url")
     consumer_key = fields.Char("Consumer key")
     consumer_secret = fields.Char("Consumer Secret")
-    version = fields.Selection([('v2', 'V2')], 'Version')
+    version = fields.Selection([
+                                ('v2', 'V2'),
+                                ('v3', 'V3')
+                                ],
+                               string='Version')
     verify_ssl = fields.Boolean("Verify SSL")
     default_lang_id = fields.Many2one(
         comodel_name='res.lang',
@@ -58,6 +71,7 @@ class WcBackend(models.Model):
             self.location,
             self.consumer_key,
             self.consumer_secret,
+            self.version or 'v3'
         )
         with WooAPI(woo_location) as woo_api:
             _super = super(WcBackend, self)
@@ -67,23 +81,34 @@ class WcBackend(models.Model):
                 yield work
 
     @api.multi
+    def add_checkpoint(self, record):
+        self.ensure_one()
+        record.ensure_one()
+        return checkpoint.add_checkpoint(self.env, record._name, record.id,
+                                         self._name, self.id)
+
+    # Unused Method, Can be deprecated.
+    @api.multi
     def get_product_ids(self, data):
         product_ids = [x['id'] for x in data['products']]
         product_ids = sorted(product_ids)
         return product_ids
 
+    # Unused Method, Can be deprecated.
     @api.multi
     def get_product_category_ids(self, data):
         product_category_ids = [x['id'] for x in data['product_categories']]
         product_category_ids = sorted(product_category_ids)
         return product_category_ids
 
+    # Unused Method, Can be deprecated.
     @api.multi
     def get_customer_ids(self, data):
         customer_ids = [x['id'] for x in data['customers']]
         customer_ids = sorted(customer_ids)
         return customer_ids
 
+    # Unused Method, Can be deprecated.
     @api.multi
     def get_order_ids(self, data):
         order_ids = self.check_existing_order(data)
@@ -111,17 +136,20 @@ class WcBackend(models.Model):
         location = self.location
         cons_key = self.consumer_key
         sec_key = self.consumer_secret
-        version = 'v3'
-        wcapi = API(url=location,
-                    consumer_key=cons_key,
-                    consumer_secret=sec_key,
-                    version=version,
-                    query_string_auth=True
-                    )
-        r = wcapi.get("products")
-        if r.status_code == 404:
-            raise Warning(_("Enter Valid url"))
-        val = r.json()
+        version = self.version or 'v3'
+        try:
+            wcapi = API(url=location,
+                        consumer_key=cons_key,
+                        consumer_secret=sec_key,
+                        version=version,
+                        query_string_auth=True
+                        )
+            r = wcapi.get("products")
+            if r.status_code == 404:
+                raise Warning(_("Enter Valid url"))
+            val = r.json()
+        except:
+            raise Warning(_("Sorry, Could not reach WooCommerce site!"))
         msg = ''
         if 'errors' in r.json():
             msg = val['errors'][0]['message'] + '\n' + \
@@ -136,7 +164,7 @@ class WcBackend(models.Model):
         import_start_time = datetime.now()
         backend = self
         from_date = None
-        self.env['woo.product.category'].with_delay().import_batch(
+        self.env['woo.product.category'].with_delay(priority=1).import_batch(
                 backend,
                 filters={'from_date': from_date,
                          'to_date': import_start_time},
@@ -148,7 +176,7 @@ class WcBackend(models.Model):
         import_start_time = datetime.now()
         backend = self
         from_date = None
-        self.env['woo.product.product'].with_delay().import_batch(
+        self.env['woo.product.product'].with_delay(priority=2).import_batch(
                 backend,
                 filters={'from_date': from_date,
                          'to_date': import_start_time},
@@ -160,7 +188,7 @@ class WcBackend(models.Model):
         import_start_time = datetime.now()
         backend = self
         from_date = None
-        self.env['woo.res.partner'].with_delay().import_batch(
+        self.env['woo.res.partner'].with_delay(priority=3).import_batch(
                 backend,
                 filters={'from_date': from_date,
                          'to_date': import_start_time}
@@ -172,7 +200,7 @@ class WcBackend(models.Model):
         import_start_time = datetime.now()
         backend = self
         from_date = None
-        self.env['woo.sale.order'].with_delay().import_batch(
+        self.env['woo.sale.order'].with_delay(priority=4).import_batch(
                 backend,
                 filters={'from_date': from_date,
                          'to_date': import_start_time}
