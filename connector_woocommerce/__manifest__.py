@@ -26,7 +26,7 @@
     'description': """WooCommerce Connector.""",
     'author': 'Tech Receptives',
     'contributors': 'Tech Receptives, Serpent Consulting Services Pvt. Ltd.',
-    'maintainer': 'Odoo Community Association',
+    'maintainer': 'Odoo Community Association (OCA)',
     'website': 'http://www.openerp.com',
     'summary': """Imports the Product Categories, Products, Customers and
                     Sale orders from Woocommerce.""",
