@@ -33,7 +33,7 @@ _logger = logging.getLogger(__name__)
 try:
     from woocommerce import API
 except ImportError:
-    _logger.debug("Can not import 'woocommerce'")
+    _logger.debug("Cannot import 'woocommerce'")
 
 
 class WcBackend(models.Model):

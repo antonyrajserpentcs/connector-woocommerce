@@ -35,7 +35,7 @@ _logger = logging.getLogger(__name__)
 try:
     from woocommerce import API
 except ImportError:
-    _logger.debug("Can not import 'woocommerce'")
+    _logger.debug("Cannot import 'woocommerce'")
 
 
 WOO_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
