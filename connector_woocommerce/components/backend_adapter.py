@@ -22,64 +22,32 @@
 import socket
 import logging
 import xmlrpclib
-from woocommerce import API
-
-from openerp.addons.connector.unit.backend_adapter import CRUDAdapter
-from openerp.addons.connector.exception import (NetworkRetryableError,
-                                                RetryableJobError)
-from openerp.tools.safe_eval import safe_eval
 
 from datetime import datetime
+
+from odoo.addons.component.core import AbstractComponent
+from odoo.addons.queue_job.exception import RetryableJobError
+from odoo.addons.connector.exception import NetworkRetryableError
+from odoo.tools.safe_eval import safe_eval
+
 _logger = logging.getLogger(__name__)
 
-recorder = {}
+try:
+    from woocommerce import API
+except ImportError:
+    _logger.debug("Cannot import 'woocommerce'")
 
 
-def call_to_key(method, arguments):
-    """ Used to 'freeze' the method and arguments of a call to WooCommerce
-    so they can be hashable; they will be stored in a dict.
-
-    Used in both the recorder and the tests.
-    """
-    def freeze(arg):
-        if isinstance(arg, dict):
-            items = dict((key, freeze(value)) for key, value
-                         in arg.iteritems())
-            return frozenset(items.iteritems())
-        elif isinstance(arg, list):
-            return tuple([freeze(item) for item in arg])
-        else:
-            return arg
-
-    new_args = []
-    for arg in arguments:
-        new_args.append(freeze(arg))
-    return (method, tuple(new_args))
-
-
-def record(method, arguments, result):
-    """ Utility function which can be used to record test data
-    during synchronisations. Call it from WooCRUDAdapter._call
-
-    Then ``output_recorder`` can be used to write the data recorded
-    to a file.
-    """
-    recorder[call_to_key(method, arguments)] = result
-
-
-def output_recorder(filename):
-    import pprint
-    with open(filename, 'w') as f:
-        pprint.pprint(recorder, f)
-    _logger.debug('recorder written to file %s', filename)
+WOO_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
 class WooLocation(object):
 
-    def __init__(self, location, consumer_key, consumre_secret):
+    def __init__(self, location, consumer_key, consumre_secret, version):
         self._location = location
         self.consumer_key = consumer_key
         self.consumer_secret = consumre_secret
+        self.version = version
 
     @property
     def location(self):
@@ -87,23 +55,92 @@ class WooLocation(object):
         return location
 
 
-class WooCRUDAdapter(CRUDAdapter):
+class WooAPI(object):
 
-    """ External Records Adapter for woo """
-
-    def __init__(self, connector_env):
+    def __init__(self, location):
         """
-
-        :param connector_env: current environment (backend, session, ...)
-        :type connector_env: :class:`connector.connector.ConnectorEnvironment`
+        :param location: Woo location
+        :type location: :class:`WooLocation`
         """
-        super(WooCRUDAdapter, self).__init__(connector_env)
-        backend = self.backend_record
-        woo = WooLocation(
-            backend.location,
-            backend.consumer_key,
-            backend.consumer_secret)
-        self.woo = woo
+        self._location = location
+        self._api = None
+
+    @property
+    def api(self):
+#        if self._api is None:
+#        api.__enter__()
+        return self._api
+
+    def __enter__(self):
+        # we do nothing, api is lazy
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self._api is not None:
+            return
+#            self._api.__exit__(type, value, traceback)
+
+    def call(self, method, arguments):
+        try:
+            location = self._location._location
+            cons_key = self._location.consumer_key
+            sec_key = self._location.consumer_secret
+            version = self._location.version or 'v3'
+            api = API(url=location,
+                        consumer_key=cons_key,
+                        consumer_secret=sec_key,
+                        version=version,
+                        query_string_auth=True
+                        )
+            self._api = api
+            if self._api:
+                if isinstance(arguments, list):
+                    while arguments and arguments[-1] is None:
+                        arguments.pop()
+                start = datetime.now()
+                try:
+                    if 'false' or 'true' or 'null'in \
+                    self._api.get(method).content:
+                        result = self._api.get(method).content.replace(
+                            'false', 'False')
+                        result = result.replace('true', 'True')
+                        result = result.replace('null', 'False')
+                        result = safe_eval(result)
+                    else:
+                        result = safe_eval(self._api.get(method).content)
+                except:
+                    _logger.error("api.call(%s, %s) failed", method, arguments)
+                    raise
+                else:
+                    _logger.debug("api.call(%s, %s) returned %s in %s seconds",
+                                  method, arguments, result,
+                                  (datetime.now() - start).seconds)
+                return result
+        except (socket.gaierror, socket.error, socket.timeout) as err:
+            raise NetworkRetryableError(
+                'A network error caused the failure of the job: '
+                '%s' % err)
+        except xmlrpclib.ProtocolError as err:
+            if err.errcode in [502,   # Bad gateway
+                               503,   # Service unavailable
+                               504]:  # Gateway timeout
+                raise RetryableJobError(
+                    'A protocol error caused the failure of the job:\n'
+                    'URL: %s\n'
+                    'HTTP/HTTPS headers: %s\n'
+                    'Error code: %d\n'
+                    'Error message: %s\n' %
+                    (err.url, err.headers, err.errcode, err.errmsg))
+            else:
+                raise
+
+
+class WooCRUDAdapter(AbstractComponent):
+    """ External Records Adapter for Woo """
+
+    _name = 'woo.crud.adapter'
+    _inherit = ['base.backend.adapter', 'base.woo.connector']
+    _usage = 'backend.adapter'
 
     def search(self, filters=None):
         """ Search records according to some criterias
@@ -133,56 +170,23 @@ class WooCRUDAdapter(CRUDAdapter):
 
     def _call(self, method, arguments):
         try:
-            _logger.debug("Start calling Woocommerce api %s", method)
-            api = API(url=self.woo.location,
-                      consumer_key=self.woo.consumer_key,
-                      consumer_secret=self.woo.consumer_secret,
-                      version='v2')
-            if api:
-                if isinstance(arguments, list):
-                    while arguments and arguments[-1] is None:
-                        arguments.pop()
-                start = datetime.now()
-                try:
-                    if 'false' or 'true' or 'null'in api.get(method).content:
-                        result = api.get(method).content.replace(
-                            'false', 'False')
-                        result = result.replace('true', 'True')
-                        result = result.replace('null', 'False')
-                        result = safe_eval(result)
-                    else:
-                        result = safe_eval(api.get(method).content)
-                except:
-                    _logger.error("api.call(%s, %s) failed", method, arguments)
-                    raise
-                else:
-                    _logger.debug("api.call(%s, %s) returned %s in %s seconds",
-                                  method, arguments, result,
-                                  (datetime.now() - start).seconds)
-                return result
-        except (socket.gaierror, socket.error, socket.timeout) as err:
-            raise NetworkRetryableError(
-                'A network error caused the failure of the job: '
-                '%s' % err)
-        except xmlrpclib.ProtocolError as err:
-            if err.errcode in [502,   # Bad gateway
-                               503,   # Service unavailable
-                               504]:  # Gateway timeout
-                raise RetryableJobError(
-                    'A protocol error caused the failure of the job:\n'
-                    'URL: %s\n'
-                    'HTTP/HTTPS headers: %s\n'
-                    'Error code: %d\n'
-                    'Error message: %s\n' %
-                    (err.url, err.headers, err.errcode, err.errmsg))
-            else:
-                raise
+            woo_api = getattr(self.work, 'woo_api')
+        except AttributeError:
+            raise AttributeError(
+                'You must provide a woo_api attribute with a '
+                'WooAPI instance to be able to use the '
+                'Backend Adapter.'
+            )
+        return woo_api.call(method, arguments)
 
 
-class GenericAdapter(WooCRUDAdapter):
+class GenericAdapter(AbstractComponent):
 
-    _model_name = None
+    _name = 'woo.adapter'
+    _inherit = 'woo.crud.adapter'
+
     _woo_model = None
+    _admin_path = None
 
     def search(self, filters=None):
         """ Search records according to some criterias
