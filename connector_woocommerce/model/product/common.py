@@ -1,26 +1,8 @@
 # -*- coding: utf-8 -*-
-#
-#
-#    Tech-Receptives Solutions Pvt. Ltd.
-#    Copyright (C) 2009-TODAY Tech-Receptives(<http://www.techreceptives.com>).
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
+# See LICENSE file for full copyright and licensing details.
 
 import logging
-import xmlrpclib
+import xmlrpc.client
 from odoo import models, fields, api, _
 from odoo.addons.connector.exception import IDMissingInBackend
 from odoo.addons.component.core import Component
@@ -72,7 +54,7 @@ class ProductProductAdapter(Component):
     def _call(self, method, arguments):
         try:
             return super(ProductProductAdapter, self)._call(method, arguments)
-        except xmlrpclib.Fault as err:
+        except xmlrpc.client.Fault as err:
             # this is the error in the WooCommerce API
             # when the customer does not exist
             if err.faultCode == 102:
@@ -103,7 +85,3 @@ class ProductProductAdapter(Component):
 
     def get_images(self, id, storeview_id=None):
         return self._call('products/' + str(id), [int(id), storeview_id, 'id'])
-
-    def read_image(self, id, image_name, storeview_id=None):
-        return self._call('products',
-                          [int(id), image_name, storeview_id, 'id'])

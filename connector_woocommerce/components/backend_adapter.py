@@ -1,33 +1,15 @@
 # -*- coding: utf-8 -*-
-#
-#
-#    Tech-Receptives Solutions Pvt. Ltd.
-#    Copyright (C) 2009-TODAY Tech-Receptives(<http://www.techreceptives.com>).
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
-
+# See LICENSE file for full copyright and licensing details.
 import socket
 import logging
-import xmlrpclib
+import xmlrpc.client
 
 from datetime import datetime
 
 from odoo.addons.component.core import AbstractComponent
 from odoo.addons.queue_job.exception import RetryableJobError
 from odoo.addons.connector.exception import NetworkRetryableError
+from odoo.addons.queue_job.exception import FailedJobError
 from odoo.tools.safe_eval import safe_eval
 
 _logger = logging.getLogger(__name__)
@@ -99,15 +81,16 @@ class WooAPI(object):
                         arguments.pop()
                 start = datetime.now()
                 try:
-                    if 'false' or 'true' or 'null'in \
-                    self._api.get(method).content:
-                        result = self._api.get(method).content.replace(
-                            'false', 'False')
-                        result = result.replace('true', 'True')
-                        result = result.replace('null', 'False')
-                        result = safe_eval(result)
-                    else:
-                        result = safe_eval(self._api.get(method).content)
+                    res = self.api.get(method)
+                    if res.status_code == 404:
+                        raise FailedJobError(
+                            res.status_code, 
+                            "Site not found! "
+                            "Confirm the test connection.")
+                    vals = res.json()
+                    if not res.ok:
+                        raise FailedJobError(vals)
+                    result = vals
                 except:
                     _logger.error("api.call(%s, %s) failed", method, arguments)
                     raise
@@ -120,7 +103,7 @@ class WooAPI(object):
             raise NetworkRetryableError(
                 'A network error caused the failure of the job: '
                 '%s' % err)
-        except xmlrpclib.ProtocolError as err:
+        except xmlrpc.client.ProtocolError as err:
             if err.errcode in [502,   # Bad gateway
                                503,   # Service unavailable
                                504]:  # Gateway timeout

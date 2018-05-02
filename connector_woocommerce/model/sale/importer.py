@@ -1,23 +1,5 @@
 # -*- coding: utf-8 -*-
-#
-#
-#    Tech-Receptives Solutions Pvt. Ltd.
-#    Copyright (C) 2009-TODAY Tech-Receptives(<http://www.techreceptives.com>).
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
+# See LICENSE file for full copyright and licensing details.
 
 import logging
 
@@ -157,6 +139,8 @@ class SaleOrderImporter(Component):
 
     def _after_import(self, binding):
         """ Hook called at the end of the import """
+        # Calling partner onchange of SO.
+        binding.odoo_id.onchange_partner_id()
         return
 
     def _get_woo_data(self):
@@ -214,13 +198,9 @@ class SaleOrderImportMapper(Component):
             if rec['customer_id']:
                 partner_id = binder.to_internal(rec['customer_id'],
                                                unwrap=True) or False
-#               customer_id = str(rec['customer_id'])
                 assert partner_id, ("Please Check Customer Role \
                                     in WooCommerce")
                 result = {'partner_id': partner_id.id}
-                onchange_val = self.env['sale.order'].onchange_partner_id()
-                if onchange_val:
-                    result.update(onchange_val['value'])
             else:
                 customer = rec['customer']['billing_address']
                 country_id = False
@@ -245,16 +225,12 @@ class SaleOrderImportMapper(Component):
                     'country_id': country_id
                 }
                 partner_id = self.env['res.partner'].create(partner_dict)
-                partner_dict.update({
-                    'backend_id': self.backend_record.id,
-                    'odoo_id': partner_id.id,
-                })
-#                 woo_partner_id = self.env['woo.res.partner'].create(
-#                     partner_dict)
+                # Deprecated
+                #partner_dict.update({
+                #    'backend_id': self.backend_record.id,
+                #    'odoo_id': partner_id.id,
+                #})
                 result = {'partner_id': partner_id.id}
-                onchange_val = self.env['sale.order'].onchange_partner_id()
-                if onchange_val:
-                    result.update(onchange_val['value'])
             return result
 
     @mapping
