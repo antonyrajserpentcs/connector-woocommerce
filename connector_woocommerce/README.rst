@@ -10,7 +10,7 @@ Features
 --------
 
 **Helps to import and export the Woocommerce records such as below**
-	* Product Categeries
+	* Product's Categeries
 	* Products
 	* Customers
 	* Sale Orders
@@ -68,7 +68,7 @@ Configuration
 
 **Test Connection and Import**
 	* Check the connection.
-	* Import the Product Categories, Products, Customers and Sale Orders.
+	* Import or Export the Product's Categories, Products, Customers and Sale Orders.
 	* Trace the jobs.
 	* Verify checkpoints.
 

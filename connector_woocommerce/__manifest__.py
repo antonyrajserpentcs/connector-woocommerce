@@ -15,8 +15,9 @@
                        Serpent Consulting Services Pvt. Ltd.""",
     'maintainer': 'Odoo Community Association (OCA)',
     'website': 'http://www.openerp.com',
-    'summary': """Imports the Product Categories, Products, Customers and
-                    Sale orders from Woocommerce.""",
+    'summary': """Imports the Product's Categories, Products, Customers and
+                Sale orders from WooCommerce, Meanwhile Exports from Odoo
+                To WooCommerce.""",
     'depends': ['base', 'connector', 'connector_ecommerce'],
     'installable': True,
     'auto_install': False,
