@@ -124,9 +124,6 @@ class CustomerAdapter(Component):
         data = {
             "customer": data
         }
-#        res = self._call('post', self._woo_model, data)
-#        external_id = res.get('product_category').get('id')
-#        return {'res': res, 'external_id': external_id}
         return self._call('post', self._woo_model, data)
 
     def write(self, id, data):

@@ -13,8 +13,9 @@
 				<group>
 					<field name="sync_data" />
 					<field name="woo_backend_id" options="{'no_open': True}"
+						attrs="{'invisible':[('sync_data', '!=', True)], 'required':[('sync_data', '=', True)]}" />
+					<field name="woo_bind_ids" readonly="True"
 						attrs="{'invisible':[('sync_data', '!=', True)]}" />
-					<field name="woo_bind_ids" />
 				</group>
 			</page>
 		</field>

@@ -2,7 +2,6 @@
 # Copyright 2013-2017 Camptocamp SA
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html)
 import odoo
-import base64
 
 from odoo import http
 from odoo.http import request

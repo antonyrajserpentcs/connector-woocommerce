@@ -12,7 +12,6 @@ from odoo import _
 from odoo.addons.component.core import AbstractComponent
 from odoo.addons.connector.exception import (IDMissingInBackend,
                                              RetryableJobError)
-from .backend_adapter import WOO_DATETIME_FORMAT
 
 _logger = logging.getLogger(__name__)
 
@@ -48,14 +47,6 @@ class WooBaseExporter(AbstractComponent):
         Adapt in the sub-classes when the model is not imported
         using ``import_record``.
         """
-#        # force is True because the sync_date will be more recent
-#        # so the import would be skipped
-#        assert self.external_id
-#        self.binding.with_delay().export_record(
-#                                                #self.backend_record,
-#                                                #self.external_id,
-                                                #force=True
-#                                                )
         return
 
     def _should_import(self):

@@ -63,24 +63,24 @@
 							</page>
 							<page string="Export" name="export">
 								<group>
-									<label string="Update category" class="oe_inline" />
-									<button name="upate_woo_category" type="object" class="oe_highlight"
-										string="Update in background" />
+									<label string="Export category" class="oe_inline" />
+									<button name="export_category" type="object" class="oe_highlight"
+										string="Export in background" />
 								</group>
 								<group>
-									<label string="Update Product" class="oe_inline" />
-									<button name="upate_woo_product" type="object" class="oe_highlight"
-										string="Update in background" />
+									<label string="Export Product" class="oe_inline" />
+									<button name="export_product" type="object" class="oe_highlight"
+										string="Export in background" />
 								</group>
 								<group>
-									<label string="Update Customers" class="oe_inline" />
-									<button name="upate_woo_customer" type="object" class="oe_highlight"
-										string="Update in background" />
+									<label string="Export Customers" class="oe_inline" />
+									<button name="export_customer" type="object" class="oe_highlight"
+										string="Export in background" />
 								</group>
 								<group>
-									<label string="Update Sale Orders" class="oe_inline" />
-									<button name="upate_woo_saleorder" type="object" class="oe_highlight"
-										string="Update in background" />
+									<label string="Export Sale Orders" class="oe_inline" />
+									<button name="export_saleorder" type="object" class="oe_highlight"
+										string="Export in background" />
 								</group>
 							</page>
 						</notebook>

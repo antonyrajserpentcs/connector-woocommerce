@@ -98,9 +98,9 @@ class WooAPI(object):
                                    resource, arguments)
                     raise
                 else:
-                    _logger.debug("api.call(%s, %s, %s) returned %s in %s seconds",
-                                  method, resource, arguments, result,
-                                  (datetime.now() - start).seconds)
+                    _logger.debug("api.call(%s, %s, %s) returned %s in %s\
+                     seconds", method, resource, arguments, result,
+                                (datetime.now() - start).seconds)
                 return result
         except (socket.gaierror, socket.error, socket.timeout) as err:
             raise NetworkRetryableError(
@@ -213,7 +213,3 @@ class GenericAdapter(AbstractComponent):
     def delete(self, id):
         """ Delete a record on the external system """
         return self._call('%s.delete' % self._woo_model, [int(id)])
-
-    def get_odoo_image(self, model, id, field='image'):
-        odoo_url = request.httprequest.url_root
-        url = "%s/web/image?model=%s&id=%s&field=%s" % (model, id, field)

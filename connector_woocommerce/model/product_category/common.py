@@ -35,7 +35,6 @@ class WooProductCategory(models.Model):
         store=True,
         readonly=False,
     )
-
     slug = fields.Char('Slung Name')
     woo_parent_id = fields.Many2one(
         comodel_name='woo.product.category',
@@ -69,6 +68,7 @@ class ProductCategory(models.Model):
         inverse_name='odoo_id',
         string="Woo Bindings",
     )
+    woo_image = fields.Binary("WooCommerce Image")
     #These fields are required for export
     sync_data = fields.Boolean("Synch with Woo?")
     woo_backend_id = fields.Many2one(
@@ -119,9 +119,6 @@ class CategoryAdapter(Component):
         data = {
             "product_category": data
         }
-#        res = self._call('post', self._woo_model, data)
-#        external_id = res.get('product_category').get('id')
-#        return {'res': res, 'external_id': external_id}
         return self._call('post', self._woo_model, data)
 
     def write(self, id, data):

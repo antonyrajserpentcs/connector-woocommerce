@@ -97,18 +97,21 @@ class WooBackend(models.Model):
         version = self.version or 'v3'
         msg = str()
         try:
-            wcapi = API(url=location,
-                        consumer_key=cons_key,
-                        consumer_secret=sec_key,
-                        version=version,
-                        query_string_auth=True
-                        )
+            wcapi = API(
+                url=location,  # Your store URL
+                consumer_key=cons_key,  # Your consumer key
+                consumer_secret=sec_key,  # Your consumer secret
+                version=version,  # WooCommerce WP REST API version
+                query_string_auth=True  # Force Basic Authentication as query
+                                        # string true and using under HTTPS
+            )
             r = wcapi.get("products")
             if r.status_code == 404:
                 msg = "(Enter Valid url)"
             val = r.json()
         except:
-            raise Warning(_("Sorry, Could not reach WooCommerce site! %s")%(msg))
+            raise Warning(_("Sorry, Could not reach WooCommerce site! %s")\
+                          % (msg))
         msg = ''
         if 'errors' in r.json():
             msg = val['errors'][0]['message'] + '\n' + \
@@ -195,53 +198,71 @@ class WooBackend(models.Model):
         return True
 
     @api.multi
-    def update_woo_data(self, model):
+    def export_data(self, model, domain=[]):
         """
-            This method updates the records which are already
-             synced with WooCoomerce store.
+        This method create/updates the records with Odoo record
+         on WooCoomerce store.
         """
         self.ensure_one()
-        woo_obj = self.env[model]
-        import_ids = woo_obj.search([])
+        woo_obj = self.env["woo.%s" % model]
+        target_obj = self.env[model]
+        import_ids = target_obj.search(domain)
         if not import_ids:
             raise Warning(_("Sorry, There is no record to Export!"))
         # Creating Jobs
         for import_id in import_ids:
-            import_id.with_delay().export_record()
+            is_woo_data = woo_obj.search([
+                                ('odoo_id', '=', import_id.id)], limit=1)
+            if is_woo_data:
+                #Do export
+                is_woo_data.with_delay().export_record()
+            else:
+                # Build environment to export
+                import_id = woo_obj.create({
+                    'backend_id': self.id,
+                    'odoo_id': import_id.id,
+                })
+                # Do export
+                import_id.with_delay().export_record()
         return True
 
     @api.multi
-    def upate_woo_category(self):
+    def export_category(self):
         """
-            This Method update the product category records
+            This Method create/update the product category records
             on WooCommerce with Odoo data.
         """
         #Add filters if any here.
-        self.update_woo_data("woo.product.category")
+        domain = []
+        self.export_data("product.category", domain)
 
     @api.multi
-    def upate_woo_product(self):
+    def export_product(self):
         """
-            This Method update the product records
+            This Method create/update the product records
             on WooCommerce with Odoo data.
         """
         #Add filters if any here.
-        self.update_woo_data("woo.product.product")
+        domain = [('active', '=', True)]
+        self.export_data("product.product", domain)
 
     @api.multi
-    def upate_woo_customer(self):
+    def export_customer(self):
         """
-            This Method update the customer records
+            This Method create/update the customer records
             on WooCommerce with Odoo data.
         """
         #Add filters if any here.
-        self.update_woo_data("woo.res.partner")
+        domain = [('customer', '=', True),
+                  ('active', '=', True)]
+        self.export_data("res.partner", domain)
 
     @api.multi
-    def upate_woo_saleorder(self):
+    def export_saleorder(self):
         """
-            This Method update the customer records
+            This Method create/update the customer records
             on WooCommerce with Odoo data.
         """
         #Add filters if any here.
-        self.update_woo_data("woo.sale.order")
+        domain = []
+        self.export_data("sale.order", domain)

@@ -53,11 +53,12 @@ class ProductCategoryExportMapper(Component):
     _inherit = 'woo.export.mapper'
     _apply_on = ['woo.product.category']
 
-    @changed_by('name', 'name')
+    @changed_by('name')
     @mapping
     def name(self, record):
         return {"name": record.name}
 
+    @changed_by('parent_id')
     @mapping
     def parent(self, record):
         binder = self.binder_for("woo.product.category")

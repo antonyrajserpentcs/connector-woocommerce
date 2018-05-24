@@ -2,7 +2,6 @@
 # Copyright 2013-2017 Camptocamp SA
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html)
 import odoo
-import base64
 
 from odoo import http
 from odoo.http import request
@@ -61,7 +60,7 @@ class ProductProductExportMapper(Component):
     _inherit = 'woo.export.mapper'
     _apply_on = ['woo.product.product']
 
-    @changed_by('name', 'name')
+    @changed_by('name')
     @mapping
     def name(self, record):
         data = {
@@ -70,11 +69,13 @@ class ProductProductExportMapper(Component):
         }
         return data
 
+    @changed_by('category_id')
     @mapping
     def sku(self, record):
         if record.default_code:
             return {'sku': record.default_code}
 
+    @changed_by('default_code')
     @mapping
     def categories(self, record):
         if record.categ_id:
@@ -82,20 +83,22 @@ class ProductProductExportMapper(Component):
             category_id = binder.to_external(record.categ_id, wrap=True)
             return {"categories": [category_id]}
 
+    @changed_by('list_price')
     @mapping
     def sale_price(self, record):
         return {'regular_price': record.list_price}
 
-    # Need to fix invalid url error.
+#Need to fix "woocommerce_api_invalid_remote_product_image" error.
 #    @mapping
 #    def image(self, record):
 #        # Odoo base url
 #        base_url = request.httprequest.url_root
-#        # Need to test more
-#        image_url = Website.image_url(None, record, 'image')
 #        # Custom
 #        image_url = "%sweb/image?model=%s&id=%s&field=%s" %\
 #         (base_url, record._name, record.id, 'image')
+#        ##Using Attachment
+#        ##image_url = base_url + "web/image/%s?access_token=%s" % \
+#        ## (attachment_id, access_token)
 #        return {'images': [
 #                        {
 #                         "src": image_url,

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2013-2017 Camptocamp SA
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html)
-import base64
 import odoo
 
 from odoo import http
@@ -128,7 +127,7 @@ class SaleOrderExportMapper(Component):
 
     @only_create
     @mapping
-    def orderline(self, record):
+    def orderline_create(self, record):
         items = []
         if record.order_line:
             for line in record.order_line:
@@ -145,3 +144,8 @@ class SaleOrderExportMapper(Component):
                     "total": line.price_unit
                 })
             return {"line_items": items}
+
+    @mapping
+    def orderline_update(self, record):
+        """ Eneter your Logic here to Update order lines """
+        return

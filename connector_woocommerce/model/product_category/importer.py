@@ -4,6 +4,10 @@
 # See LICENSE file for full copyright and licensing details.
 
 import logging
+import base64
+import urllib.request
+import urllib.error
+
 from odoo.addons.component.core import Component
 from odoo.addons.connector.components.mapper import mapping
 from odoo.addons.connector.exception import MappingError
@@ -113,6 +117,26 @@ class ProductCategoryImportMapper(Component):
                                    rec['parent'])
             return {'parent_id': category_id.id,
                     'woo_parent_id': woo_cat_id.id}
+
+    @mapping
+    def woo_image(self, record):
+        image = record.get('image')
+        if image:
+            src = image.replace("\\", '')
+            try:
+                request = urllib.request.Request(src)
+                binary = urllib.request.urlopen(request)
+            except urllib.error.HTTPError as err:
+                if err.code == 404:
+                    # the image is just missing, we skip it
+                    return
+                else:
+                    # we don't know why we couldn't download the image
+                    # so we propagate the error, the import will fail
+                    # and we have to check why it couldn't be accessed
+                    raise
+            else:
+                return {'woo_image': base64.b64encode(binary.read())}
 
     # Required for export
     @mapping

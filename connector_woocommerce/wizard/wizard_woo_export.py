@@ -3,7 +3,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 # See LICENSE file for full copyright and licensing details.
 
-from odoo import models, api, fields, _
+from odoo import _, api, fields, models
 from odoo.exceptions import Warning
 
 

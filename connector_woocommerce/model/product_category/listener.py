@@ -37,5 +37,3 @@ class WooProductCategoryExportListener(Component):
     def on_record_write(self, record, fields=None):
         for binding in record.woo_bind_ids:
             binding.with_delay().export_record()
-#        for binding in record.woo_address_bind_ids:
-#            binding.with_delay().export_record()
